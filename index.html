@@ -2,7 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+<meta name="theme-color" content="#020617">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gemelo STS">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="Gemelo digital de una grúa pórtico STS: telemetría, interbloqueos y mando táctil para celular y tablet.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>Terminal Portuario · Gemelo Digital STS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -94,9 +105,119 @@
   ::-webkit-scrollbar-thumb{background:rgba(0,240,255,.35);border-radius:3px;}
   kbd{font-family:'JetBrains Mono',monospace;font-size:9.5px;background:#1e293b;border:1px solid #475569;border-bottom-width:2px;border-radius:4px;padding:0 4px;color:#e2e8f0;}
   @media (prefers-reduced-motion: reduce){ .blink{animation:none;} .bar>i{transition:none;} }
+
+  /* --- Ventanas flotantes: se arrastran por su barra, se minimizan y se ocultan --- */
+  .win{position:fixed;z-index:30;touch-action:none;}
+  .win.dragging{opacity:.92;}
+  .win-bar{cursor:move;-webkit-user-select:none;user-select:none;}
+  .win-tools{display:flex;align-items:center;gap:6px;flex:0 0 auto;white-space:nowrap;}
+  .win-bar h3,.win-bar>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .win-btn{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:5px;
+    color:#94a3b8;background:rgba(15,32,48,.9);border:1px solid rgba(148,163,184,.22);font-size:10px;flex:0 0 auto;}
+  .win-btn:hover{color:#fff;background:#1e293b;}
+  .win.min>*:not(.win-bar){display:none !important;}
+  .win.min .win-btn[data-min] i{transform:rotate(-90deg);}
+  #align-hud{width:330px;max-width:calc(100vw - 16px);}
+  #align-hud.min{width:auto;min-width:250px;}
+  #align-hud.min #al-banner{display:block !important;margin-top:6px;}
+  #pip-frame{position:fixed;width:min(340px,calc(100vw - 16px));}
+  #pip-frame.min{width:auto;min-width:220px;}
+  .pip-bar .win-btn{background:rgba(2,6,23,.8);}
+
+  /* --- Interruptores de paneles en el encabezado --- */
+  .ui-tg{width:30px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;
+    color:#64748b;font-size:12px;transition:background .15s,color .15s;}
+  .ui-tg:hover{color:#e2e8f0;background:#1e293b;}
+  .ui-tg.on{color:#22d3ee;background:rgba(34,211,238,.12);}
+  body.hide-tele #panels>aside[data-mpanel="tele"]{display:none;}
+  body.hide-ctl #panels>aside[data-mpanel="ctl"]{display:none;}
+  body.hide-hud #align-hud{display:none;}
+  body.hide-pip #pip-frame{display:none;}
+  body.hide-log #logbar{display:none;}
+
+  /* =================================================================
+     CELULAR Y TABLET · layout por pestanas, mando tactil y rendimiento
+     ================================================================= */
+  html,body{overscroll-behavior:none;-webkit-text-size-adjust:100%;}
+  body{touch-action:manipulation;}
+  #app{height:100dvh;}
+  #canvas-container canvas{touch-action:none;}
+
+  /* --- HUD compacto y dock tactil (ocultos en escritorio) --- */
+  #m-hud{display:none;max-width:94%;text-align:center;font-size:11px;font-weight:700;color:#67e8f9;
+    background:rgba(2,6,23,.85);border:1px solid rgba(34,211,238,.35);border-radius:9px;padding:5px 11px;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:none;}
+  #mdock{display:none;flex-direction:column;gap:6px;}
+  #mpad{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:flex-end;
+    background:linear-gradient(135deg,rgba(7,16,27,.95),rgba(12,25,38,.92));
+    border:1px solid rgba(0,240,255,.26);border-radius:12px;padding:7px 8px;
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 12px 30px rgba(0,0,0,.6);}
+  .pad-g{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .pad-g>.lbl{font-size:9px;letter-spacing:.08em;color:#64748b;font-weight:700;}
+  .pad-row{display:flex;gap:6px;align-items:stretch;}
+  .pad-btn{min-width:54px;min-height:46px;padding:0 10px;display:flex;align-items:center;justify-content:center;gap:6px;
+    border-radius:10px;border:1px solid rgba(34,211,238,.35);background:rgba(15,32,48,.95);color:#e2e8f0;
+    font-size:15px;font-weight:700;touch-action:none;-webkit-tap-highlight-color:transparent;
+    transition:background .1s,color .1s,transform .08s;}
+  .pad-btn:active{transform:scale(.95);}
+  .pad-btn.on{background:#22d3ee;color:#02202a;border-color:#a5f3fc;}
+  .pad-btn#pad-auto,.pad-btn#pad-estop,.pad-btn#pad-spr{font-family:'Chakra Petch',sans-serif;font-size:12px;letter-spacing:.05em;}
+  .pad-btn.wide{min-width:104px;font-family:'Chakra Petch',sans-serif;font-size:12.5px;letter-spacing:.04em;}
+  .pad-btn.ready{background:linear-gradient(90deg,#059669,#10b981);color:#022c22;border-color:#6ee7b7;}
+  .pad-btn.locked{background:linear-gradient(90deg,#0891b2,#22d3ee);color:#022c33;border-color:#a5f3fc;}
+  .pad-btn.blocked{background:#3f1d1d;color:#fca5a5;border-color:#7f1d1d;}
+  .pad-btn.danger{border-color:rgba(248,113,113,.5);color:#fca5a5;background:rgba(58,14,14,.9);}
+  #mtabs{display:none;gap:6px;}
+  .mtab{flex:1;min-height:42px;display:flex;align-items:center;justify-content:center;gap:7px;
+    font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:11.5px;border-radius:9px;color:#94a3b8;
+    background:rgba(8,19,31,.92);border:1px solid rgba(255,255,255,.08);-webkit-tap-highlight-color:transparent;}
+  .mtab.on{background:#22d3ee;color:#02202a;border-color:#a5f3fc;}
+
+  /* El mando tactil aparece en cualquier pantalla con dedo (tablet incluida) */
+  @media (pointer:coarse){ #mdock{display:flex;} }
+
+  /* --- Layout de celular / tablet en vertical (por debajo de 900 px) --- */
+  @media (max-width:900px){
+    #mdock{display:flex;}
+    #mtabs{display:flex;}
+    #overlay{padding:6px;gap:6px;}
+    .m-hide{display:none !important;}
+    #cam-bar{flex-wrap:nowrap;overflow-x:auto;max-width:100%;scrollbar-width:none;}
+    #cam-bar::-webkit-scrollbar{display:none;}
+    .cam-btn{font-size:0;padding:8px 10px;gap:0;}
+    .cam-btn i{font-size:14px;}
+    #panels{display:flex;flex-direction:column;gap:6px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    #panels>section{display:none;}
+    #panels>aside{width:100%;padding-right:0;}
+    #panels p#align-mini{display:block;}
+    body.m-tab-vista #panels{display:none;}
+    body.m-tab-tele #panels>aside[data-mpanel="ctl"]{display:none;}
+    body.m-tab-ctl #panels>aside[data-mpanel="tele"]{display:none;}
+    body.m-tab-tele #panels>aside[data-mpanel="tele"]{display:flex;}
+    body.m-tab-ctl #panels>aside[data-mpanel="ctl"]{display:flex;}
+    #ui-toggles .ui-tg[data-tg="tele"],#ui-toggles .ui-tg[data-tg="ctl"]{display:none;}
+    body.m-tab-vista #m-hud{display:block;margin-top:auto;align-self:center;}
+    header h1{font-size:13px;}
+    footer{padding:5px 9px !important;}
+    #log{font-size:10.5px;max-height:2.9em;overflow:hidden;}
+    .scada-panel{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+    input[type=range]{height:10px;}
+    input[type=range]::-webkit-slider-thumb{height:24px;width:24px;}
+    input[type=range]::-moz-range-thumb{height:24px;width:24px;}
+    .btn{padding:11px 10px;}
+  }
+
+  /* --- Celular en horizontal: alto escaso, todo mas compacto --- */
+  @media (max-height:520px) and (pointer:coarse){
+    #overlay{padding:4px;gap:4px;}
+    .pad-btn{min-height:38px;min-width:46px;}
+    .pad-g>.lbl{display:none;}
+    .mtab{min-height:34px;}
+    footer{display:none;}
+  }
 </style>
 </head>
-<body>
+<body class="m-tab-vista">
 <div id="app">
   <div id="canvas-container"></div>
   <div class="scanline"></div>
@@ -113,7 +234,7 @@
             Terminal portuario · gemelo digital STS
             <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 font-semibold">v10.1 · piloto automático</span>
           </h1>
-          <p class="text-[10.5px] text-slate-400 truncate">Contenedores independientes · péndulo acoplado al carro · colisiones · interbloqueos · VGM · buque Panamax</p>
+          <p class="m-hide text-[10.5px] text-slate-400 truncate">Contenedores independientes · péndulo acoplado al carro · colisiones · interbloqueos · VGM · buque Panamax</p>
         </div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
@@ -125,6 +246,13 @@
           <button class="cam-btn" data-cam="cctv-buque"><i class="fa-solid fa-video"></i>CCTV buque</button>
           <button class="cam-btn" data-cam="dron"><i class="fa-solid fa-helicopter"></i>Dron</button>
         </div>
+        <div id="ui-toggles" class="flex items-center gap-1 bg-slate-900/90 rounded-lg p-1 border border-slate-700/60">
+          <button type="button" class="ui-tg on" data-tg="tele" title="Panel de telemetría" aria-label="Panel de telemetría"><i class="fa-solid fa-gauge-high"></i></button>
+          <button type="button" class="ui-tg on" data-tg="ctl" title="Panel de control" aria-label="Panel de control"><i class="fa-solid fa-sliders"></i></button>
+          <button type="button" class="ui-tg on" data-tg="hud" title="Alineación" aria-label="Ventana de alineación"><i class="fa-solid fa-crosshairs"></i></button>
+          <button type="button" class="ui-tg on" data-tg="pip" title="CCTV spreader" aria-label="Ventana CCTV"><i class="fa-solid fa-video"></i></button>
+          <button type="button" class="ui-tg on" data-tg="log" title="Registro" aria-label="Registro de telemetría"><i class="fa-solid fa-terminal"></i></button>
+        </div>
         <div class="flex items-center gap-2 px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-700/50">
           <span id="status-led" class="led led-green"></span>
           <span id="status-text" class="text-[11px] font-bold text-emerald-400">OPERATIVO</span>
@@ -135,10 +263,10 @@
       </div>
     </header>
 
-    <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-2 overflow-y-auto md:overflow-hidden">
+    <div id="panels" class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-2 overflow-y-auto md:overflow-hidden">
 
       <!-- IZQUIERDA: TELEMETRÍA -->
-      <aside class="md:col-span-3 flex flex-col gap-2 md:overflow-y-auto pointer-events-auto pr-1 min-h-0">
+      <aside data-mpanel="tele" class="md:col-span-3 flex flex-col gap-2 md:overflow-y-auto pointer-events-auto pr-1 min-h-0">
 
         <div class="scada-panel rounded-xl p-3 border-l-2 border-l-emerald-400">
           <div class="card-h"><h3 class="font-header text-emerald-400"><i class="fa-solid fa-lock"></i>Twistlocks y carga</h3><span id="lock-pill" class="pill pill-red">UNLOCKED</span></div>
@@ -194,21 +322,8 @@
         </div>
       </aside>
 
-      <!-- CENTRO: ALINEACIÓN + PiP -->
-      <section class="hidden md:flex md:col-span-6 flex-col items-center justify-between min-h-0 pointer-events-none">
-        <div id="align-hud" class="scada-panel rounded-xl p-3 w-[330px] pointer-events-auto">
-          <div class="card-h"><h3 class="font-header text-cyan-300" id="al-title"><i class="fa-solid fa-crosshairs"></i>Alineación del spreader</h3><span id="al-target" class="text-[10px] text-slate-400">—</span></div>
-          <div id="al-rows"></div>
-          <div id="al-banner" class="mt-2 text-center text-[12px] font-bold font-header py-1.5 rounded-md border">—</div>
-        </div>
-        <div id="pip-frame" class="pointer-events-none">
-          <div class="pip-bar"><span><i class="fa-solid fa-video"></i> CCTV spreader · vista cenital</span><span id="pip-info">—</span></div>
-          <div id="pip-view"></div>
-        </div>
-      </section>
-
       <!-- DERECHA: CONTROL -->
-      <aside class="md:col-span-3 flex flex-col gap-2 md:overflow-y-auto pointer-events-auto min-h-0">
+      <aside data-mpanel="ctl" class="md:col-span-3 flex flex-col gap-2 md:overflow-y-auto pointer-events-auto min-h-0">
 
         <div class="scada-panel rounded-xl p-3 border-l-2 border-l-sky-400">
           <div class="card-h"><h3 class="font-header text-sky-300"><i class="fa-solid fa-clipboard-list"></i>Orden de trabajo</h3><span id="wo-count" class="pill pill-green">0 completadas</span></div>
@@ -280,27 +395,88 @@
           </div>
         </div>
 
-        <div class="scada-panel rounded-xl p-3">
-          <div class="card-h"><h3 class="font-header text-fuchsia-300"><i class="fa-solid fa-film"></i>Fondo con video IA</h3></div>
-          <p class="text-[10.5px] text-slate-400 mb-2 leading-relaxed">Carga un MP4 de 10 s (Veo / Gemini) con cámara fija. Se proyecta como panorama lejano del lado del mar, en bucle.</p>
-          <label class="btn bg-slate-800 text-slate-200 border-slate-700 cursor-pointer"><i class="fa-solid fa-upload"></i>Cargar video<input id="in-video" type="file" accept="video/*" class="hidden"></label>
-          <div class="grid grid-cols-2 gap-2 mt-2">
-            <button type="button" id="btn-vmirror" class="btn bg-slate-900 text-slate-400 border-slate-700 text-[10.5px]"><i class="fa-solid fa-left-right"></i>Espejar</button>
-            <button type="button" id="btn-vremove" class="btn bg-slate-900 text-slate-400 border-slate-700 text-[10.5px]"><i class="fa-solid fa-xmark"></i>Quitar</button>
-          </div>
-        </div>
-
         <div class="scada-panel rounded-xl p-3 text-[10.5px] text-slate-400 leading-relaxed">
           <div class="card-h"><h3 class="font-header text-slate-300"><i class="fa-solid fa-keyboard"></i>Atajos</h3></div>
           <div><kbd>A</kbd><kbd>D</kbd> carro · <kbd>W</kbd><kbd>S</kbd> izaje · <kbd>Q</kbd><kbd>E</kbd> pórtico</div>
           <div class="mt-1"><kbd>P</kbd> piloto auto · <kbd>Espacio</kbd> lock/unlock · <kbd>T</kbd> 20/40' · <kbd>X</kbd> parada · <kbd>1</kbd>–<kbd>6</kbd> cámaras</div>
+          <div class="mt-1 text-slate-400">En celular y tablet: mando táctil abajo, pestañas Vista / Telemetría / Control, y un dedo para orbitar la cámara (dos dedos para acercar).</div>
+          <div class="mt-1 text-slate-400">Los iconos del encabezado ocultan o muestran cada panel; las ventanas de alineación y CCTV se arrastran por su barra y se minimizan.</div>
           <div class="mt-1.5 text-slate-500">Ciclo: ubicar sobre el contenedor marcado → bajar hasta asentar → LOCK → izar → trasladar → bajar sobre el camión → UNLOCK → izar.</div>
         </div>
       </aside>
     </div>
 
+    <!-- VENTANAS FLOTANTES: se arrastran por su barra y se minimizan -->
+    <div id="align-hud" class="scada-panel rounded-xl p-3 pointer-events-auto win min">
+      <div class="card-h win-bar">
+        <h3 class="font-header text-cyan-300" id="al-title"><i class="fa-solid fa-crosshairs"></i>Alineación del spreader</h3>
+        <div class="win-tools">
+          <span id="al-target" class="text-[10px] text-slate-400">—</span>
+          <button type="button" class="win-btn" data-min="align-hud" aria-label="Minimizar o ampliar"><i class="fa-solid fa-chevron-down"></i></button>
+          <button type="button" class="win-btn" data-close="hud" aria-label="Ocultar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+      <div id="al-rows"></div>
+      <div id="al-banner" class="mt-2 text-center text-[12px] font-bold font-header py-1.5 rounded-md border">—</div>
+    </div>
+
+    <div id="pip-frame" class="pointer-events-auto win">
+      <div class="pip-bar win-bar">
+        <span class="truncate"><i class="fa-solid fa-video"></i> CCTV spreader</span>
+        <div class="win-tools">
+          <span id="pip-info">—</span>
+          <button type="button" class="win-btn" data-min="pip-frame" aria-label="Minimizar o ampliar"><i class="fa-solid fa-chevron-down"></i></button>
+          <button type="button" class="win-btn" data-close="pip" aria-label="Ocultar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+      <div id="pip-view"></div>
+    </div>
+
+    <!-- HUD COMPACTO Y MANDO TACTIL (celular / tablet) -->
+    <div id="m-hud">—</div>
+
+    <div id="mdock" class="pointer-events-auto">
+      <div id="mpad">
+        <div class="pad-g">
+          <span class="lbl">CARRO</span>
+          <div class="pad-row">
+            <button type="button" class="pad-btn" data-axis="trolley" data-dir="-1" aria-label="Carro hacia el muelle">◀</button>
+            <button type="button" class="pad-btn" data-axis="trolley" data-dir="1" aria-label="Carro hacia el buque">▶</button>
+          </div>
+        </div>
+        <div class="pad-g">
+          <span class="lbl">IZAJE</span>
+          <div class="pad-row">
+            <button type="button" class="pad-btn" data-axis="hoist" data-dir="-1" aria-label="Subir carga">▲</button>
+            <button type="button" class="pad-btn" data-axis="hoist" data-dir="1" aria-label="Bajar carga">▼</button>
+          </div>
+        </div>
+        <div class="pad-g">
+          <span class="lbl">PÓRTICO</span>
+          <div class="pad-row">
+            <button type="button" class="pad-btn" data-axis="gantry" data-dir="-1" aria-label="Pórtico hacia proa">«</button>
+            <button type="button" class="pad-btn" data-axis="gantry" data-dir="1" aria-label="Pórtico hacia popa">»</button>
+          </div>
+        </div>
+        <div class="pad-g">
+          <span class="lbl">MANDO</span>
+          <div class="pad-row">
+            <button type="button" id="pad-auto" class="pad-btn" aria-label="Piloto automático">AUTO</button>
+            <button type="button" id="pad-lock" class="pad-btn wide"><span id="pad-lock-t">LOCK</span></button>
+            <button type="button" id="pad-spr" class="pad-btn" aria-label="Largo del spreader">40'</button>
+            <button type="button" id="pad-estop" class="pad-btn danger" aria-label="Parada de emergencia">PARO</button>
+          </div>
+        </div>
+      </div>
+      <div id="mtabs" role="tablist" aria-label="Secciones">
+        <button type="button" class="mtab on" role="tab" data-tab="vista"><i class="fa-solid fa-cube"></i>Vista</button>
+        <button type="button" class="mtab" role="tab" data-tab="tele"><i class="fa-solid fa-gauge-high"></i>Telemetría</button>
+        <button type="button" class="mtab" role="tab" data-tab="ctl"><i class="fa-solid fa-sliders"></i>Control</button>
+      </div>
+    </div>
+
     <!-- LOG -->
-    <footer class="scada-panel rounded-xl px-3 py-2 flex justify-between items-start gap-3 text-xs pointer-events-auto border-r-4 border-r-cyan-400">
+    <footer id="logbar" class="scada-panel rounded-xl px-3 py-2 flex justify-between items-start gap-3 text-xs pointer-events-auto border-r-4 border-r-cyan-400">
       <div class="flex items-start gap-3 min-w-0 flex-1">
         <div class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[10.5px] text-cyan-400 flex items-center gap-1.5 shrink-0"><i class="fa-solid fa-terminal"></i>Telemetría</div>
         <div id="log" class="text-slate-300 text-[11px] min-w-0 flex-1 leading-[1.45]"></div>
@@ -316,6 +492,10 @@
 //  UTILIDADES
 // =====================================================================
 const $ = id => document.getElementById(id);
+
+// Dispositivo: en celular/tablet se baja la carga grafica y se activa el mando tactil
+const IS_TOUCH = (window.matchMedia && matchMedia('(pointer:coarse)').matches) || navigator.maxTouchPoints > 0;
+const IS_MOBILE = IS_TOUCH && (Math.min(screen.width, screen.height) <= 900 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const kg = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' kg';
@@ -379,7 +559,7 @@ const S = {
 };
 
 let scene, camera, renderer, controls, pipCam;
-let craneGroup, trolleyGroup, waterMesh, radarMesh, highlight, orderMarker, videoPanel = null, videoEl = null;
+let craneGroup, trolleyGroup, waterMesh, radarMesh, highlight, orderMarker;
 let SPR = null;
 const ropes = [], containers = [], trucks = [], logs = [];
 let order = null, cameraMode = 'global', time = 0;
@@ -440,7 +620,7 @@ function setupLighting(){
   scene.add(new THREE.HemisphereLight(0xc4dcec, 0x3b3f38, 0.55));
   const sun = new THREE.DirectionalLight(0xfff3e0, 2.1);
   sun.position.set(90, 120, 60); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(IS_MOBILE ? 1024 : 2048, IS_MOBILE ? 1024 : 2048);
   sun.shadow.camera.near = 10; sun.shadow.camera.far = 320;
   const d = 105; Object.assign(sun.shadow.camera, { left: -d, right: d, top: d, bottom: -d });
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
@@ -1316,27 +1496,6 @@ function log(msg, warn = false){
 }
 
 // =====================================================================
-//  VIDEO IA COMO PANORAMA
-// =====================================================================
-function loadVideo(file){
-  try {
-    if (videoEl) { videoEl.pause(); URL.revokeObjectURL(videoEl.src); }
-    const v = document.createElement('video');
-    v.src = URL.createObjectURL(file); v.loop = true; v.muted = true; v.playsInline = true;
-    v.onerror = () => log('El navegador no pudo decodificar el video (use MP4 H.264)', true);
-    v.play().then(() => log(`Video IA cargado: ${file.name} · en bucle como panorama`)).catch(e => log('No se pudo reproducir el video: ' + e.message, true));
-    const tex = new THREE.VideoTexture(v); tex.encoding = THREE.sRGBEncoding;
-    tex.wrapS = THREE.RepeatWrapping; tex.repeat.x = -1; tex.offset.x = 1;
-    if (!videoPanel) {
-      const geo = new THREE.CylinderGeometry(390, 390, 190, 64, 1, true, Math.PI / 2 - 1.15, 2.3);
-      const m = new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, depthWrite: false });
-      videoPanel = new THREE.Mesh(geo, m); videoPanel.position.set(0, 93, 0); videoPanel.renderOrder = -1; scene.add(videoPanel);
-    } else { if (videoPanel.material.map) videoPanel.material.map.dispose(); videoPanel.material.map = tex; videoPanel.material.needsUpdate = true; videoPanel.visible = true; }
-    videoEl = v;
-  } catch (e) { log('Error al cargar el video: ' + e.message, true); }
-}
-
-// =====================================================================
 //  CÁMARAS
 // =====================================================================
 function setCam(m){
@@ -1429,6 +1588,9 @@ function updateUI(){
   else if (S.locking) { lcls = 'idle'; ltxt = 'Girando twistlocks…'; }
   else { lcls = r.ok ? 'ready' : 'idle'; ltxt = r.ok ? 'LOCK · espacio' : 'LOCK · no disponible'; }
   setCls('btn-lock', 'btn btn-lock ' + lcls); setT('btn-lock-t', ltxt);
+  setCls('pad-lock', 'pad-btn wide ' + lcls); setT('pad-lock-t', S.locked ? 'UNLOCK' : 'LOCK');
+  setCls('pad-auto', 'pad-btn' + (AUTO.on ? ' on' : ''));
+  setT('pad-spr', ft(S.sprLenCur));
 
   // alineación
   updateAlignHUD(r);
@@ -1494,7 +1656,7 @@ function updateAlignHUD(r){
   if (!S.held) { const [, , off] = footprint(); const sup = supportAt(S.sp.x, S.sp.z, 1.22, S.sprLenCur / 2, null); setT('pip-info', `libre ${(S.sp.y - off - sup.y).toFixed(1)} m`); }
   setH('al-title', title); setT('al-target', target); setH('al-rows', rows);
   setT('al-banner', banner); setCls('al-banner', 'mt-2 text-center text-[12px] font-bold font-header py-1.5 rounded-md border ' + bcls);
-  setT('align-mini', mini);
+  setT('align-mini', mini); setT('m-hud', mini);
 }
 
 function bindUI(){
@@ -1525,9 +1687,9 @@ function bindUI(){
   $('btn-estop').addEventListener('click', triggerEstop);
   $('btn-fatigue').addEventListener('click', () => { S.cycles = 0; S.damage = 0; S.lastDs = 0; log('Acumulador de fatiga restablecido'); });
   $('btn-reset').addEventListener('click', () => location.reload());
-  $('in-video').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) loadVideo(f); e.target.value = ''; });
-  $('btn-vmirror').addEventListener('click', () => { if (videoPanel && videoPanel.material.map) { const t = videoPanel.material.map; t.repeat.x *= -1; t.offset.x = t.repeat.x < 0 ? 1 : 0; t.needsUpdate = true; } });
-  $('btn-vremove').addEventListener('click', () => { if (videoPanel) videoPanel.visible = false; if (videoEl) videoEl.pause(); });
+
+  bindTouchUI();
+  bindWindows();
 
   const KEYS = { KeyA: ['trolley', -1], ArrowLeft: ['trolley', -1], KeyD: ['trolley', 1], ArrowRight: ['trolley', 1], KeyW: ['hoist', -1], ArrowUp: ['hoist', -1], KeyS: ['hoist', 1], ArrowDown: ['hoist', 1], KeyQ: ['gantry', -1], KeyE: ['gantry', 1] };
   window.addEventListener('keydown', e => {
@@ -1552,14 +1714,149 @@ function bindUI(){
     const ax = S[m[0]]; if (ax.key === m[1]) { ax.key = 0; ax.target = stoppingTarget(ax); }
   });
   window.addEventListener('blur', () => { for (const ax of [S.trolley, S.hoist, S.gantry]) if (ax.key) { ax.key = 0; ax.target = stoppingTarget(ax); } });
-  window.addEventListener('resize', onResize);
+  window.addEventListener('resize', scheduleResize);
+  window.addEventListener('orientationchange', () => { scheduleResize(); setTimeout(onResize, 450); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', scheduleResize);
   setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString('es-PE', { hour12: false }); }, 1000);
+}
+
+// =====================================================================
+//  MANDO TACTIL Y PESTANAS (celular / tablet)
+// =====================================================================
+function axisPress(name, dir){
+  if (S.estop > 0) return;
+  if (AUTO.on) setAuto(false, 'el operador tomó el control');
+  if ((name === 'trolley' || name === 'gantry') && S.landed) { holdWarn(); return; }
+  S[name].key = dir;
+}
+function axisRelease(name, dir){
+  const ax = S[name];
+  if (ax.key === dir) { ax.key = 0; ax.target = stoppingTarget(ax); }
+}
+
+function setTab(tab){
+  for (const t of ['vista', 'tele', 'ctl']) document.body.classList.toggle('m-tab-' + t, t === tab);
+  document.querySelectorAll('.mtab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  scheduleResize();
+}
+
+// --- Ventanas flotantes (alineacion y CCTV): arrastrar, minimizar, ocultar ---
+const WIN_KEY = 'sts.ui.v1';
+function loadUI(){ try { return JSON.parse(localStorage.getItem(WIN_KEY)) || {}; } catch (e) { return {}; } }
+function saveUI(patch){ try { localStorage.setItem(WIN_KEY, JSON.stringify(Object.assign(loadUI(), patch))); } catch (e) { /* sin almacenamiento */ } }
+
+function placeWin(el, x, y){
+  const r = el.getBoundingClientRect();
+  const maxX = Math.max(4, window.innerWidth - r.width - 4);
+  const maxY = Math.max(4, window.innerHeight - r.height - 4);
+  el.style.left = clamp(x, 4, maxX) + 'px';
+  el.style.top = clamp(y, 4, maxY) + 'px';
+  el.style.right = 'auto'; el.style.bottom = 'auto';
+}
+function defaultWinPos(el){
+  const r = el.getBoundingClientRect();
+  const top = ($('overlay').querySelector('header').getBoundingClientRect().bottom) + 10;
+  if (el.id === 'pip-frame') {
+    const rightEdge = document.body.classList.contains('hide-ctl') || window.innerWidth < 900
+      ? window.innerWidth - 12 : window.innerWidth * 0.75 - 6;
+    return [rightEdge - r.width, top];
+  }
+  const pip = $('pip-frame');
+  const below = window.innerWidth < 900 && !document.body.classList.contains('hide-pip')
+    ? pip.getBoundingClientRect().bottom + 8 : top;
+  return [(window.innerWidth - r.width) / 2, below];
+}
+function restoreWin(el){
+  const st = loadUI()[el.id];
+  const [dx, dy] = defaultWinPos(el);
+  placeWin(el, st ? st.x : dx, st ? st.y : dy);
+}
+function makeDraggable(el){
+  const bar = el.querySelector('.win-bar');
+  let sx = 0, sy = 0, ox = 0, oy = 0, on = false;
+  bar.addEventListener('pointerdown', e => {
+    if (e.target.closest('.win-btn')) return;
+    const r = el.getBoundingClientRect(); ox = r.left; oy = r.top; sx = e.clientX; sy = e.clientY; on = true;
+    el.classList.add('dragging');
+    try { bar.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
+    e.preventDefault();
+  });
+  bar.addEventListener('pointermove', e => { if (on) placeWin(el, ox + e.clientX - sx, oy + e.clientY - sy); });
+  const end = () => {
+    if (!on) return; on = false; el.classList.remove('dragging');
+    const r = el.getBoundingClientRect(); saveUI({ [el.id]: { x: Math.round(r.left), y: Math.round(r.top) } });
+  };
+  bar.addEventListener('pointerup', end);
+  bar.addEventListener('pointercancel', end);
+  bar.addEventListener('lostpointercapture', end);
+}
+function setPanel(name, visible){
+  document.body.classList.toggle('hide-' + name, !visible);
+  const b = document.querySelector(`.ui-tg[data-tg="${name}"]`); if (b) b.classList.toggle('on', visible);
+  saveUI({ ['hide-' + name]: !visible });
+  // una ventana oculta no tiene medidas: al mostrarla se recoloca dentro de la pantalla
+  if (visible) { const w = name === 'hud' ? $('align-hud') : name === 'pip' ? $('pip-frame') : null; if (w) restoreWin(w); }
+  scheduleResize();
+}
+
+function bindWindows(){
+  const st = loadUI();
+  for (const name of ['tele', 'ctl', 'hud', 'pip', 'log']) {
+    const auto = (name === 'pip' || name === 'hud') && window.innerWidth < 900;
+    const hidden = st['hide-' + name] === undefined ? auto : !!st['hide-' + name];
+    document.body.classList.toggle('hide-' + name, hidden);
+    const b = document.querySelector(`.ui-tg[data-tg="${name}"]`); if (b) b.classList.toggle('on', !hidden);
+  }
+  document.querySelectorAll('.ui-tg').forEach(b =>
+    b.addEventListener('click', () => setPanel(b.dataset.tg, !b.classList.contains('on'))));
+
+  for (const id of ['align-hud', 'pip-frame']) {
+    const el = $(id);
+    if (st[id + '.min'] !== undefined) el.classList.toggle('min', !!st[id + '.min']);
+    makeDraggable(el);
+    restoreWin(el);
+  }
+  document.querySelectorAll('.win-btn[data-min]').forEach(b => b.addEventListener('click', () => {
+    const el = $(b.dataset.min); el.classList.toggle('min');
+    saveUI({ [el.id + '.min']: el.classList.contains('min') });
+    restoreWin(el);
+  }));
+  document.querySelectorAll('.win-btn[data-close]').forEach(b =>
+    b.addEventListener('click', () => setPanel(b.dataset.close, false)));
+
+  window.addEventListener('resize', () => { for (const id of ['align-hud', 'pip-frame']) { const el = $(id); const r = el.getBoundingClientRect(); placeWin(el, r.left, r.top); } });
+}
+
+function bindTouchUI(){
+  document.querySelectorAll('#mpad .pad-btn[data-axis]').forEach(b => {
+    const name = b.dataset.axis, dir = +b.dataset.dir;
+    const press = e => {
+      e.preventDefault();
+      if (b.setPointerCapture && e.pointerId !== undefined) { try { b.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ } }
+      b.classList.add('on'); axisPress(name, dir);
+    };
+    const release = () => { b.classList.remove('on'); axisRelease(name, dir); };
+    b.addEventListener('pointerdown', press);
+    b.addEventListener('pointerup', release);
+    b.addEventListener('pointercancel', release);
+    b.addEventListener('lostpointercapture', release);
+    b.addEventListener('contextmenu', e => e.preventDefault());
+  });
+  $('pad-auto').addEventListener('click', () => setAuto(!AUTO.on));
+  $('pad-lock').addEventListener('click', () => { if (AUTO.on) setAuto(false, 'el operador tomó el control'); lockPressed(); });
+  $('pad-spr').addEventListener('click', () => { if (!AUTO.on) setSprLen(S.sprLenTarget > 10 ? L20 : L40); });
+  $('pad-estop').addEventListener('click', triggerEstop);
+  document.querySelectorAll('.mtab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+  // Sin rebote ni zoom por doble toque sobre los paneles
+  document.addEventListener('gesturestart', e => e.preventDefault());
 }
 
 // =====================================================================
 //  RENDER
 // =====================================================================
 let W = 1, H = 1;
+let resizeTimer = 0;
+function scheduleResize(){ clearTimeout(resizeTimer); resizeTimer = setTimeout(onResize, 120); }
 function onResize(){
   const app = $('app'); W = app.clientWidth; H = app.clientHeight;
   camera.aspect = W / H; camera.updateProjectionMatrix(); renderer.setSize(W, H);
@@ -1592,15 +1889,18 @@ function init(){
   const app = $('app'); W = app.clientWidth; H = app.clientHeight;
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(42, W / H, 0.3, 1400); camera.position.set(62, 36, 80);
-  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setSize(W, H); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;
+  renderer = new THREE.WebGLRenderer({ antialias: !IS_MOBILE, powerPreference: 'high-performance' });
+  renderer.setSize(W, H); renderer.setPixelRatio(Math.min(window.devicePixelRatio, IS_MOBILE ? 1.5 : 2));
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = IS_MOBILE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
   renderer.outputEncoding = THREE.sRGBEncoding;
   $('canvas-container').appendChild(renderer.domElement);
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.06; controls.maxPolarAngle = Math.PI / 2 - 0.02;
   controls.minDistance = 8; controls.maxDistance = 280;
+  // Tactil: un dedo orbita, dos dedos acercan y desplazan
+  if (THREE.TOUCH) controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+  controls.rotateSpeed = IS_TOUCH ? 0.6 : 1;
   pipCam = new THREE.PerspectiveCamera(55, 1.6, 0.1, 200); pipCam.up.set(1, 0, 0);
 
   const sky = createSky();
