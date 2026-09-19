@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Grúa pórtico STS">
+  <rect width="512" height="512" rx="72" fill="#020617"/>
+  <g fill="#22d3ee">
+    <rect x="96" y="96" width="32" height="304"/>
+    <rect x="300" y="96" width="32" height="304"/>
+    <rect x="60" y="96" width="410" height="28"/>
+    <rect x="96" y="170" width="236" height="20"/>
+  </g>
+  <g fill="#67e8f9">
+    <rect x="60" y="400" width="410" height="30"/>
+    <rect x="246" y="124" width="40" height="26"/>
+    <rect x="258" y="150" width="4" height="100"/>
+    <rect x="270" y="150" width="4" height="100"/>
+    <rect x="232" y="250" width="68" height="50"/>
+  </g>
+</svg>
